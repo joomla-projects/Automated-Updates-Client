@@ -25,6 +25,7 @@ use Joomla\CMS\Log\Log;
 use Joomla\CMS\MVC\Factory\MVCFactoryInterface;
 use Joomla\CMS\MVC\Model\BaseDatabaseModel;
 use Joomla\CMS\Plugin\PluginHelper;
+use Joomla\CMS\Table\Extension;
 use Joomla\CMS\Table\Tuf as TufMetadata;
 use Joomla\CMS\Updater\Update;
 use Joomla\CMS\Updater\Updater;
@@ -455,6 +456,78 @@ class UpdateModel extends BaseDatabaseModel
         $response['check'] = $this->isChecksumValid($target, $updateInfo['object']);
 
         return $response;
+    }
+
+    /**
+     * Update the datetime for the last health check run
+     *
+     * @return void
+     *
+     * @since __DEPLOY_VERSION__
+     */
+    public function updateLastHealthCheck()
+    {
+        $extension = new Extension($this->getDatabase());
+
+        $extensionId = $extension->find(['element' => 'com_joomlaupdate']);
+
+        $extension->load($extensionId);
+
+        $params = new Registry($extension->params);
+        $params->set('update_last_check', Factory::getDate()->toSql());
+
+        $extension->params = (string) $params;
+
+        $extension->store();
+    }
+
+    /**
+     * Get the latest version for the auto update
+     *
+     * @return string|null
+     *
+     * @since __DEPLOY_VERSION__
+     */
+    public function getAutoUpdateVersion(): ?string
+    {
+        $this->refreshUpdates(true);
+
+        $updateInfo = $this->getUpdateInformation();
+
+        return $updateInfo['latest'] ?? null;
+    }
+
+    /**
+     * Download file and request password/filesize information
+     *
+     * @param string $targetVersion
+     *
+     * @return array
+     *
+     * @since __DEPLOY_VERSION__
+     */
+    public function prepareAutoUpdate(string $targetVersion): array
+    {
+        $fileInformation = $this->download();
+
+        if ($fileInformation['version'] !== $targetVersion) {
+            throw new \Exception(Text::_('COM_JOOMLAUPDATE_VIEW_UPDATE_VERSION_WRONG'), 410);
+        }
+
+        if ($fileInformation['check'] === false) {
+            throw new \Exception(Text::_('COM_JOOMLAUPDATE_VIEW_UPDATE_CHECKSUM_WRONG'), 410);
+        }
+
+        if (!$this->createUpdateFile($fileInformation['basename'])) {
+            throw new \Exception('Could not write update file', 410);
+        }
+
+        $app = Factory::getApplication();
+
+        return [
+            'password' => $app->getUserState('com_joomlaupdate.password'),
+            'filesize' => $app->getUserState('com_joomlaupdate.filesize'),
+        ];
     }
 
     /**
