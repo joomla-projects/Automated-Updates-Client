@@ -41,19 +41,14 @@ class BeforeJoomlaAutoupdateEvent extends AbstractJoomlaUpdateEvent
     /**
      * Set stop parameter to true
      *
-     * @param   bool  $value  The value to set
-     *
      * @return  void
      *
      * @since   __DEPLOY_VERSION__
      */
-    public function setStopUpdate($value = true)
+    public function setStopUpdate()
     {
-        $this->arguments['stopUpdate'] = $value;
-
-        if ($value === true) {
-            $this->stopPropagation();
-        }
+        $this->arguments['stopUpdate'] = true;
+        $this->stopPropagation();
     }
 
     /**
