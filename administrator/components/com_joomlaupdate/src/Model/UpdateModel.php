@@ -547,7 +547,7 @@ class UpdateModel extends BaseDatabaseModel
         $app = Factory::getApplication();
 
         // Run preparation plugin trigger
-        PluginHelper::importPlugin('extension');
+        PluginHelper::importPlugin('installer');
 
         $eventResult = $app->getDispatcher()->dispatch(
             'onBeforeJoomlaAutoupdate',
